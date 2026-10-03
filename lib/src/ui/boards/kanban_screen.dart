@@ -305,7 +305,8 @@ class _TaskColumn extends StatelessWidget {
         margin: const EdgeInsets.all(6),
         padding: const EdgeInsets.all(10),
         decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface.withOpacity(.82),
+            color: Theme.of(context).colorScheme.surface.withOpacity(
+                Theme.of(context).brightness == Brightness.light ? .55 : .82),
             borderRadius: BorderRadius.circular(16)),
         child: Column(children: [
           Row(children: [
@@ -362,7 +363,8 @@ class _TaskCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Card(
       elevation: 0,
-      color: Theme.of(context).colorScheme.surface.withOpacity(.92),
+      color: Theme.of(context).colorScheme.surface.withOpacity(
+          Theme.of(context).brightness == Brightness.light ? .72 : .92),
       margin: const EdgeInsets.only(bottom: 10),
       child: InkWell(
           borderRadius: BorderRadius.circular(12),
@@ -618,8 +620,10 @@ class _BoardCanvas extends StatelessWidget {
               Image.memory(base64Decode(image), fit: BoxFit.cover),
             if (image.isNotEmpty)
               ColoredBox(
-                  color:
-                      Theme.of(context).colorScheme.surface.withOpacity(.32)),
+                  color: Theme.of(context).colorScheme.surface.withOpacity(
+                      Theme.of(context).brightness == Brightness.light
+                          ? .14
+                          : .32)),
             child,
           ]);
         },
