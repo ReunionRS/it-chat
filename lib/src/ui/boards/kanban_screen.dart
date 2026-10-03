@@ -33,9 +33,10 @@ class KanbanScreen extends StatelessWidget {
         actions: [
           IconButton(
               tooltip: 'Изменить фон доски',
+              iconSize: 26,
               onPressed:
                   canEdit ? () => _changeBackground(context, state) : null,
-              icon: const Icon(Icons.wallpaper_rounded, color: brandBlue)),
+              icon: const Icon(Icons.image_outlined, color: brandBlue)),
           IconButton(
               onPressed: canEdit ? () => _showAddTask(context, state) : null,
               icon: const Icon(Icons.add_circle_outline, color: brandBlue)),
