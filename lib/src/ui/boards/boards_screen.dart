@@ -4,6 +4,7 @@ import '../../state/models.dart';
 import '../../theme.dart';
 import '../shared/widgets.dart';
 import 'kanban_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class BoardsScreen extends StatelessWidget {
   const BoardsScreen({super.key, this.onMenuPressed});
@@ -11,9 +12,11 @@ class BoardsScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     return SafeArea(
         child: Column(children: [
-      SectionTitle('Задачи',
+      SectionTitle(strings.tasks,
           leading: onMenuPressed == null
               ? null
               : IconButton(
@@ -21,15 +24,15 @@ class BoardsScreen extends StatelessWidget {
                   onPressed: onMenuPressed,
                   icon: const Icon(Icons.menu)),
           action: IconButton(
-              tooltip: 'Создать доску',
+              tooltip: strings.createBoard,
               onPressed: () => _createBoard(context, state),
               icon: const Icon(Icons.add_box_outlined, color: brandBlue))),
       Expanded(
           child: state.boards.isEmpty
-              ? const EmptyState(
+              ? EmptyState(
                   icon: Icons.view_kanban_outlined,
-                  title: 'Досок пока нет',
-                  subtitle: 'Создайте первую доску задач')
+                  title: strings.noBoards,
+                  subtitle: strings.createFirstBoard)
               : ListView.builder(
                   padding: const EdgeInsets.fromLTRB(16, 4, 16, 20),
                   itemCount: state.boards.length,

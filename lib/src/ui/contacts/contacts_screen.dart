@@ -6,6 +6,7 @@ import '../../state/models.dart';
 import '../../theme.dart';
 import '../shared/widgets.dart';
 import 'user_profile_dialog.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key, this.onMenuPressed, this.onChat});
@@ -44,64 +45,68 @@ class _ContactsScreenState extends State<ContactsScreen> {
   }
 
   @override
-  Widget build(BuildContext context) => SafeArea(
-          child: Column(children: [
-        SectionTitle('Контакты',
-            leading: widget.onMenuPressed == null
-                ? null
-                : IconButton(
-                    tooltip: 'Меню',
-                    onPressed: widget.onMenuPressed,
-                    icon: const Icon(Icons.menu))),
-        Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16),
-            child: TextField(
-                controller: controller,
-                onChanged: (value) {
-                  if (value.trim().isEmpty) {
-                    setState(() {
-                      results = const [];
-                      error = null;
-                    });
-                  }
-                },
-                onSubmitted: (_) => search(),
-                decoration: InputDecoration(
-                    prefixIcon: const Icon(Icons.search),
-                    hintText: 'Поиск по @username',
-                    suffixIcon: IconButton(
-                        onPressed: search,
-                        icon: const Icon(Icons.arrow_forward))))),
-        const SizedBox(height: 12),
-        Expanded(
-            child: loading
-                ? const Center(child: CircularProgressIndicator())
-                : error != null
-                    ? EmptyState(
-                        icon: Icons.error_outline,
-                        title: 'Поиск недоступен',
-                        subtitle: error!)
-                    : controller.text.trim().isNotEmpty
-                        ? _contactList(results, emptyTitle: 'Ничего не найдено')
-                        : StreamBuilder<List<Contact>>(
-                            stream: AppStateScope.of(context).savedContacts(),
-                            builder: (context, snapshot) {
-                              if (snapshot.hasError) {
-                                return const EmptyState(
-                                  icon: Icons.error_outline,
-                                  title: 'Не удалось загрузить контакты',
-                                  subtitle: 'Проверьте правила Firestore',
-                                );
-                              }
-                              if (!snapshot.hasData) {
-                                return const Center(
-                                    child: CircularProgressIndicator());
-                              }
-                              return _contactList(snapshot.data!,
-                                  emptyTitle: 'Контактов пока нет');
-                            },
-                          ))
-      ]));
+  Widget build(BuildContext context) {
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
+    return SafeArea(
+        child: Column(children: [
+      SectionTitle(strings.contacts,
+          leading: widget.onMenuPressed == null
+              ? null
+              : IconButton(
+                  tooltip: 'Меню',
+                  onPressed: widget.onMenuPressed,
+                  icon: const Icon(Icons.menu))),
+      Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16),
+          child: TextField(
+              controller: controller,
+              onChanged: (value) {
+                if (value.trim().isEmpty) {
+                  setState(() {
+                    results = const [];
+                    error = null;
+                  });
+                }
+              },
+              onSubmitted: (_) => search(),
+              decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: 'Поиск по @username',
+                  suffixIcon: IconButton(
+                      onPressed: search,
+                      icon: const Icon(Icons.arrow_forward))))),
+      const SizedBox(height: 12),
+      Expanded(
+          child: loading
+              ? const Center(child: CircularProgressIndicator())
+              : error != null
+                  ? EmptyState(
+                      icon: Icons.error_outline,
+                      title: 'Поиск недоступен',
+                      subtitle: error!)
+                  : controller.text.trim().isNotEmpty
+                      ? _contactList(results, emptyTitle: 'Ничего не найдено')
+                      : StreamBuilder<List<Contact>>(
+                          stream: AppStateScope.of(context).savedContacts(),
+                          builder: (context, snapshot) {
+                            if (snapshot.hasError) {
+                              return const EmptyState(
+                                icon: Icons.error_outline,
+                                title: 'Не удалось загрузить контакты',
+                                subtitle: 'Проверьте правила Firestore',
+                              );
+                            }
+                            if (!snapshot.hasData) {
+                              return const Center(
+                                  child: CircularProgressIndicator());
+                            }
+                            return _contactList(snapshot.data!,
+                                emptyTitle: 'Контактов пока нет');
+                          },
+                        ))
+    ]));
+  }
 
   Widget _contactList(List<Contact> contacts, {required String emptyTitle}) {
     if (contacts.isEmpty) {

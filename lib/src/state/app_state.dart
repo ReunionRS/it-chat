@@ -20,6 +20,13 @@ class AppState extends ChangeNotifier {
   bool profileComplete = false;
   bool darkMode = false;
   String language = 'Русский';
+  Locale get locale => Locale(switch (language) {
+        'Английский' => 'en',
+        'Удмуртский' => 'udm',
+        'Татарский' => 'tt',
+        'Башкирский' => 'ba',
+        _ => 'ru',
+      });
   bool busy = false;
   String email = '';
   String username = '';

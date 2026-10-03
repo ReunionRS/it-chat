@@ -15,6 +15,7 @@ import '../contacts/user_profile_dialog.dart';
 import '../profile/profile_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shared/widgets.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class HomeShell extends StatefulWidget {
   const HomeShell({super.key});
@@ -336,6 +337,8 @@ class _AppMenu extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     final scheme = Theme.of(context).colorScheme;
     final avatar = state.avatarBase64.isEmpty
         ? null
@@ -394,37 +397,37 @@ class _AppMenu extends StatelessWidget {
             const SizedBox(height: 8),
             _MenuTile(
               icon: Icons.account_circle_rounded,
-              title: 'Мой профиль',
+              title: strings.myProfile,
               selected: selectedIndex == 4,
               onTap: () => onSelected(4),
             ),
             _MenuTile(
               icon: Icons.forum_rounded,
-              title: 'Чаты',
+              title: strings.chats,
               selected: selectedIndex == 0,
               onTap: () => onSelected(0),
             ),
             _MenuTile(
               icon: Icons.group_add_rounded,
-              title: 'Создать группу',
+              title: strings.createGroup,
               selected: false,
               onTap: onCreateGroup,
             ),
             _MenuTile(
               icon: Icons.contacts_rounded,
-              title: 'Контакты',
+              title: strings.contacts,
               selected: selectedIndex == 1,
               onTap: () => onSelected(1),
             ),
             _MenuTile(
               icon: Icons.task_alt_rounded,
-              title: 'Задачи',
+              title: strings.tasks,
               selected: selectedIndex == 2,
               onTap: () => onSelected(2),
             ),
             _MenuTile(
               icon: Icons.tune_rounded,
-              title: 'Настройки',
+              title: strings.settings,
               selected: selectedIndex == 3,
               onTap: () => onSelected(3),
             ),
@@ -437,13 +440,13 @@ class _AppMenu extends StatelessWidget {
                     ? Icons.dark_mode_outlined
                     : Icons.light_mode_outlined,
               ),
-              title: const Text('Тёмная тема'),
+              title: Text(strings.darkTheme),
             ),
             ListTile(
               leading: const Icon(Icons.logout, color: Colors.redAccent),
-              title: const Text(
-                'Выйти',
-                style: TextStyle(color: Colors.redAccent),
+              title: Text(
+                strings.signOut,
+                style: const TextStyle(color: Colors.redAccent),
               ),
               onTap: state.signOut,
             ),

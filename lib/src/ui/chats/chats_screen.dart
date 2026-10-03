@@ -4,6 +4,7 @@ import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../shared/widgets.dart';
 import 'conversation_screen.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ChatsScreen extends StatefulWidget {
   const ChatsScreen({
@@ -35,6 +36,8 @@ class _ChatsScreenState extends State<ChatsScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     foldersStream ??= state.chatFolders();
     chatsStream ??= state.directChats();
     final chats = state.chats
@@ -49,10 +52,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
               !snapshot.data!.metadata.isFromCache &&
               !snapshot.hasError;
           final title = connected
-              ? 'Чаты'
+              ? strings.chats
               : snapshot.hasData
-                  ? 'Обновление…'
-                  : 'Соединение…';
+                  ? strings.updating
+                  : strings.connecting;
           return Column(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -77,9 +80,9 @@ class _ChatsScreenState extends State<ChatsScreen> {
           child: TextField(
               controller: search,
               onChanged: (v) => setState(() => query = v),
-              decoration: const InputDecoration(
-                  prefixIcon: Icon(Icons.search),
-                  hintText: 'Поиск по чатам',
+              decoration: InputDecoration(
+                  prefixIcon: const Icon(Icons.search),
+                  hintText: strings.searchChats,
                   isDense: true))),
       const SizedBox(height: 10),
       Expanded(
@@ -195,10 +198,10 @@ class _ChatsScreenState extends State<ChatsScreen> {
                             );
                           }
                           if (directChats.isEmpty && chats.isEmpty) {
-                            return const EmptyState(
+                            return EmptyState(
                               icon: Icons.forum_outlined,
-                              title: 'Чатов пока нет',
-                              subtitle: 'Найдите контакт и начните переписку',
+                              title: strings.noChats,
+                              subtitle: strings.findContact,
                             );
                           }
                           return ListView(

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 
 import '../../state/app_state.dart';
 import '../../theme.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key, this.onBack});
@@ -82,6 +83,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     final storedAvatar =
         state.avatarBase64.isEmpty ? null : base64Decode(state.avatarBase64);
     final avatar = selectedAvatar ?? storedAvatar;
@@ -93,7 +96,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 onPressed: widget.onBack,
                 icon: const Icon(Icons.arrow_back),
               ),
-        title: const Text('Профиль'),
+        title: Text(strings.profile),
       ),
       body: Center(
         child: SingleChildScrollView(

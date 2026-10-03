@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class EmailAuthScreen extends StatefulWidget {
   const EmailAuthScreen({super.key});
@@ -47,6 +48,8 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
     final scheme = Theme.of(context).colorScheme;
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     return Scaffold(
         body: SafeArea(
             child: Center(
@@ -90,7 +93,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                               Text(
                                   confirmationSent
                                       ? 'Подтвердите e-mail'
-                                      : 'Чаты и задачи — в одном месте',
+                                      : strings.tagline,
                                   textAlign: TextAlign.center,
                                   style: const TextStyle(
                                       fontSize: 18,
@@ -99,7 +102,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                               Text(
                                   confirmationSent
                                       ? 'Мы отправили ссылку подтверждения на\n${email.text}'
-                                      : 'Рабочее пространство вашей команды',
+                                      : strings.workspace,
                                   key: const Key('authSubtitle'),
                                   textAlign: TextAlign.center,
                                   style: TextStyle(
@@ -116,21 +119,21 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                                     child: Row(children: [
                                       Expanded(
                                           child: _ModeButton(
-                                              'Вход',
+                                              strings.login,
                                               !register,
                                               () => setState(
                                                   () => register = false))),
                                       Expanded(
                                           child: _ModeButton(
-                                              'Регистрация',
+                                              strings.registration,
                                               register,
                                               () => setState(
                                                   () => register = true)))
                                     ])),
                                 const SizedBox(height: 20),
-                                const Text('E-mail',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w700)),
+                                Text(strings.email,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
                                 const SizedBox(height: 7),
                                 TextField(
                                     key: const Key('emailField'),
@@ -141,9 +144,9 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                                         prefixIcon: Icon(Icons.mail_outline),
                                         hintText: 'name@company.ru')),
                                 const SizedBox(height: 14),
-                                const Text('Пароль',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.w700)),
+                                Text(strings.password,
+                                    style: const TextStyle(
+                                        fontWeight: FontWeight.w700)),
                                 const SizedBox(height: 7),
                                 TextField(
                                     key: const Key('passwordField'),
@@ -187,12 +190,12 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                                   key: const Key('authSubmit'),
                                   onPressed: state.busy ? null : submit,
                                   child: Text(state.busy
-                                      ? 'Подождите…'
+                                      ? strings.wait
                                       : confirmationSent
                                           ? 'Я подтвердил e-mail'
                                           : register
-                                              ? 'Зарегистрироваться'
-                                              : 'Войти')),
+                                              ? strings.registerAction
+                                              : strings.signIn)),
                               if (confirmationSent)
                                 TextButton(
                                     onPressed: () => setState(

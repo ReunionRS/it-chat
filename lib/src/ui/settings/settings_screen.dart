@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../state/app_state.dart';
 import '../../theme.dart';
 import '../../services/notification_service.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key, this.onMenuPressed});
@@ -15,6 +16,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     return SafeArea(
         child: ListView(padding: const EdgeInsets.all(20), children: [
       Row(children: [
@@ -25,7 +28,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               icon: const Icon(Icons.menu)),
           const SizedBox(width: 6),
         ],
-        Text('Настройки',
+        Text(strings.settings,
             style: TextStyle(
                 fontSize: 25,
                 fontWeight: FontWeight.w800,
@@ -62,31 +65,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
                 secondary:
                     const Icon(Icons.notifications_outlined, color: brandBlue),
-                title: const Text('Уведомления')),
+                title: Text(strings.notifications)),
             const Divider(height: 1),
             SwitchListTile(
                 value: appState.darkMode,
                 onChanged: appState.toggleTheme,
                 secondary:
                     const Icon(Icons.dark_mode_outlined, color: brandBlue),
-                title: const Text('Тёмная тема')),
+                title: Text(strings.darkTheme)),
             const Divider(height: 1),
             ListTile(
               onTap: () => _selectLanguage(context, appState),
               leading: const Icon(Icons.translate_rounded, color: brandBlue),
-              title: const Text('Язык'),
-              subtitle: Text(appState.language),
+              title: Text(strings.language),
+              subtitle: Text(_languageLabel(strings, appState.language)),
               trailing: const Icon(Icons.chevron_right),
             ),
           ])),
       const SizedBox(height: 12),
-      const Card(
+      Card(
           elevation: 0,
           child: Column(children: [
             ListTile(
-                leading: Icon(Icons.help_outline, color: brandBlue),
-                title: Text('Помощь'),
-                trailing: Icon(Icons.chevron_right))
+                leading: const Icon(Icons.help_outline, color: brandBlue),
+                title: Text(strings.help),
+                trailing: const Icon(Icons.chevron_right))
           ])),
       const SizedBox(height: 20),
       OutlinedButton.icon(
@@ -95,7 +98,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               minimumSize: const Size.fromHeight(50)),
           onPressed: appState.signOut,
           icon: const Icon(Icons.logout),
-          label: const Text('Выйти')),
+          label: Text(strings.signOut)),
     ]));
   }
 
@@ -113,9 +116,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const ListTile(
-              title: Text('Выберите язык',
-                  style: TextStyle(fontWeight: FontWeight.w800)),
+            ListTile(
+              title: Text(
+                  (AppLocalizations.of(context) ??
+                          lookupAppLocalizations(const Locale('ru')))
+                      .chooseLanguage,
+                  style: const TextStyle(fontWeight: FontWeight.w800)),
             ),
             for (final language in languages)
               ListTile(
@@ -125,7 +131,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : Icons.radio_button_off,
                   color: language == appState.language ? brandBlue : null,
                 ),
-                title: Text(language),
+                title: Text(_languageLabel(
+                    AppLocalizations.of(context) ??
+                        lookupAppLocalizations(const Locale('ru')),
+                    language)),
                 onTap: () => Navigator.pop(sheetContext, language),
               ),
           ],
@@ -134,4 +143,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
     if (selected != null) await appState.setLanguage(selected);
   }
+
+  String _languageLabel(AppLocalizations strings, String language) =>
+      switch (language) {
+        'Английский' => strings.english,
+        'Удмуртский' => strings.udmurt,
+        'Татарский' => strings.tatar,
+        'Башкирский' => strings.bashkir,
+        _ => strings.russian,
+      };
 }

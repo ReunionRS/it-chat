@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import '../l10n/generated/app_localizations.dart';
 import 'state/app_state.dart';
 import 'theme.dart';
+import 'localization_fallback.dart';
 import 'ui/auth/email_auth_screen.dart';
 import 'ui/auth/username_screen.dart';
 import 'ui/home/home_shell.dart';
@@ -32,6 +35,16 @@ class _ItChatAppState extends State<ItChatApp> {
               theme: buildTheme(),
               darkTheme: buildDarkTheme(),
               themeMode: state.darkMode ? ThemeMode.dark : ThemeMode.light,
+              locale: state.locale,
+              supportedLocales: AppLocalizations.supportedLocales,
+              localizationsDelegates: const [
+                AppLocalizations.delegate,
+                AdditionalMaterialLocalizationsDelegate(),
+                AdditionalCupertinoLocalizationsDelegate(),
+                GlobalMaterialLocalizations.delegate,
+                GlobalWidgetsLocalizations.delegate,
+                GlobalCupertinoLocalizations.delegate,
+              ],
               home: state.initializing
                   ? const Scaffold(
                       body: Center(child: CircularProgressIndicator()))

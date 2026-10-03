@@ -10,6 +10,7 @@ import 'package:it_chat/src/ui/chats/chats_screen.dart';
 import 'package:it_chat/src/ui/chats/conversation_screen.dart';
 import 'package:it_chat/src/ui/home/home_shell.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:it_chat/l10n/generated/app_localizations.dart';
 
 void main() {
   test('restores saved theme preference', () async {
@@ -20,6 +21,15 @@ void main() {
     expect(state.darkMode, isTrue);
     expect(state.language, 'Татарский');
     expect(state.initializing, isFalse);
+  });
+
+  test('loads regional translations and maps the selected locale', () async {
+    expect(lookupAppLocalizations(const Locale('tt')).settings, 'Көйләүләр');
+    expect(lookupAppLocalizations(const Locale('ba')).chats, 'Чаттар');
+    expect(lookupAppLocalizations(const Locale('udm')).tasks, 'Ужпумъёс');
+    final state = AppState();
+    await state.setLanguage('Башкирский');
+    expect(state.locale.languageCode, 'ba');
   });
 
   testWidgets('shows Firebase unavailable without platform config',

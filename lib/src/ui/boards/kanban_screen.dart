@@ -8,6 +8,7 @@ import '../../state/app_state.dart';
 import '../../state/models.dart';
 import '../../theme.dart';
 import '../shared/widgets.dart';
+import '../../../l10n/generated/app_localizations.dart';
 
 class KanbanScreen extends StatelessWidget {
   const KanbanScreen(
@@ -18,6 +19,8 @@ class KanbanScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final strings = AppLocalizations.of(context) ??
+        lookupAppLocalizations(const Locale('ru'));
     final canEdit = board.canEdit(state.currentUid);
     return Scaffold(
       appBar: AppBar(
@@ -25,7 +28,7 @@ class KanbanScreen extends StatelessWidget {
           Text(board.title,
               style:
                   const TextStyle(fontSize: 18, fontWeight: FontWeight.w800)),
-          Text('${board.memberIds.length} участников',
+          Text(strings.participants(board.memberIds.length),
               style: TextStyle(
                   fontSize: 12,
                   color: Theme.of(context).colorScheme.onSurfaceVariant)),
@@ -115,7 +118,7 @@ class KanbanScreen extends StatelessWidget {
       floatingActionButton: FloatingActionButton.extended(
           onPressed: canEdit ? () => _showAddTask(context, state) : null,
           icon: const Icon(Icons.add),
-          label: const Text('Новая задача')),
+          label: Text(strings.newTask)),
     );
   }
 
