@@ -19,6 +19,7 @@ class AppState extends ChangeNotifier {
   bool initializing = false;
   bool profileComplete = false;
   bool darkMode = false;
+  String language = 'Русский';
   bool busy = false;
   String email = '';
   String username = '';
@@ -909,12 +910,25 @@ class AppState extends ChangeNotifier {
     }
   }
 
+  Future<void> setLanguage(String value) async {
+    language = value;
+    notifyListeners();
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setString('language', value);
+    } catch (_) {
+      // Language persistence is optional on unsupported test platforms.
+    }
+  }
+
   Future<void> _restoreTheme() async {
     try {
       final preferences = await SharedPreferences.getInstance();
       darkMode = preferences.getBool('darkMode') ?? false;
+      language = preferences.getString('language') ?? 'Русский';
     } catch (_) {
       darkMode = false;
+      language = 'Русский';
     }
   }
 

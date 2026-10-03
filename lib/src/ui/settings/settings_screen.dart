@@ -11,7 +11,7 @@ class SettingsScreen extends StatefulWidget {
 }
 
 class _SettingsScreenState extends State<SettingsScreen> {
-  bool notifications = false, compact = false;
+  bool notifications = false;
   @override
   Widget build(BuildContext context) {
     final appState = AppStateScope.of(context);
@@ -71,21 +71,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     const Icon(Icons.dark_mode_outlined, color: brandBlue),
                 title: const Text('Тёмная тема')),
             const Divider(height: 1),
-            SwitchListTile(
-                value: compact,
-                onChanged: (v) => setState(() => compact = v),
-                secondary: const Icon(Icons.density_small, color: brandBlue),
-                title: const Text('Компактный режим'))
+            ListTile(
+              onTap: () => _selectLanguage(context, appState),
+              leading: const Icon(Icons.translate_rounded, color: brandBlue),
+              title: const Text('Язык'),
+              subtitle: Text(appState.language),
+              trailing: const Icon(Icons.chevron_right),
+            ),
           ])),
       const SizedBox(height: 12),
       const Card(
           elevation: 0,
           child: Column(children: [
-            ListTile(
-                leading: Icon(Icons.lock_outline, color: brandBlue),
-                title: Text('Конфиденциальность'),
-                trailing: Icon(Icons.chevron_right)),
-            Divider(height: 1),
             ListTile(
                 leading: Icon(Icons.help_outline, color: brandBlue),
                 title: Text('Помощь'),
@@ -100,5 +97,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
           icon: const Icon(Icons.logout),
           label: const Text('Выйти')),
     ]));
+  }
+
+  Future<void> _selectLanguage(BuildContext context, AppState appState) async {
+    const languages = [
+      'Русский',
+      'Английский',
+      'Удмуртский',
+      'Татарский',
+      'Башкирский',
+    ];
+    final selected = await showModalBottomSheet<String>(
+      context: context,
+      builder: (sheetContext) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const ListTile(
+              title: Text('Выберите язык',
+                  style: TextStyle(fontWeight: FontWeight.w800)),
+            ),
+            for (final language in languages)
+              ListTile(
+                leading: Icon(
+                  language == appState.language
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_off,
+                  color: language == appState.language ? brandBlue : null,
+                ),
+                title: Text(language),
+                onTap: () => Navigator.pop(sheetContext, language),
+              ),
+          ],
+        ),
+      ),
+    );
+    if (selected != null) await appState.setLanguage(selected);
   }
 }

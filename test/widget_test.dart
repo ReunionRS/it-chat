@@ -13,10 +13,12 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   test('restores saved theme preference', () async {
-    SharedPreferences.setMockInitialValues({'darkMode': true});
+    SharedPreferences.setMockInitialValues(
+        {'darkMode': true, 'language': 'Татарский'});
     final state = AppState();
     await state.restoreSession();
     expect(state.darkMode, isTrue);
+    expect(state.language, 'Татарский');
     expect(state.initializing, isFalse);
   });
 
