@@ -35,9 +35,11 @@ class Contact {
       {required this.uid,
       required this.username,
       required this.name,
-      this.avatarBase64 = ''});
+      this.avatarBase64 = '',
+      this.bio = '',
+      this.email = ''});
   final String uid, username, name;
-  final String avatarBase64;
+  final String avatarBase64, bio, email;
 }
 
 class ChatSummary {
@@ -95,9 +97,24 @@ class BoardTask {
       required this.title,
       required this.assignee,
       required this.status,
-      required this.priority});
-  final String id, title, assignee, priority;
+      required this.priority,
+      this.createdBy = '',
+      this.imageBase64 = '',
+      this.deadline,
+      this.assigneeIds = const [],
+      this.checklist = const []});
+  final String id, title, assignee, priority, createdBy, imageBase64;
+  final DateTime? deadline;
+  final List<String> assigneeIds;
+  final List<TaskChecklistItem> checklist;
   TaskStatus status;
+}
+
+class TaskChecklistItem {
+  const TaskChecklistItem(
+      {required this.id, required this.title, this.done = false});
+  final String id, title;
+  final bool done;
 }
 
 class TaskBoard {
@@ -119,4 +136,10 @@ class TaskBoard {
       uid != null &&
       (accessByMember[uid] == BoardAccess.edit ||
           accessByMember[uid] == BoardAccess.full);
+
+  bool hasFullAccess(String? uid) =>
+      uid != null && accessByMember[uid] == BoardAccess.full;
+
+  bool canDeleteTask(String? uid, BoardTask task) =>
+      uid != null && (hasFullAccess(uid) || task.createdBy == uid);
 }

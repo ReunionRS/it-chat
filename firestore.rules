@@ -4,7 +4,22 @@ service cloud.firestore {
     function signedIn() { return request.auth != null; }
     function member(teamId) { return signedIn() && exists(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)); }
     function admin(teamId) { return member(teamId) && get(/databases/$(database)/documents/teams/$(teamId)/members/$(request.auth.uid)).data.role == 'admin'; }
-    match /users/{uid} { allow read: if signedIn(); allow create, update: if signedIn() && request.auth.uid == uid; }
+    match /users/{uid} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.auth.uid == uid;
+
+      match /contacts/{contactUid} {
+        allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
+      }
+
+      match /chatFolders/{folderId} {
+        allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
+      }
+
+      match /blockedContacts/{contactUid} {
+        allow read, create, update, delete: if signedIn() && request.auth.uid == uid;
+      }
+    }
     match /usernames/{username} {
       allow read: if signedIn();
       allow create: if signedIn()
@@ -32,7 +47,7 @@ service cloud.firestore {
             resource.data.type == 'group'
             && resource.data.createdBy == request.auth.uid
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
-              ['roles', 'access']
+              ['roles', 'access', 'avatarBase64']
             )
           )
         );
@@ -90,24 +105,26 @@ service cloud.firestore {
           && request.auth.uid in board().memberIds
           && board().access[request.auth.uid] in ['edit', 'full'];
         allow delete: if signedIn()
-          && board().access[request.auth.uid] == 'full';
+          && request.auth.uid in board().memberIds
+          && (board().access[request.auth.uid] == 'full'
+            || resource.data.createdBy == request.auth.uid);
       }
     }
     match /teams/{teamId} {
-      allow read: if member(teamId); allow create: if signedIn() && request.resource.data.ownerId == request.auth.uid; allow update, delete: if admin(teamId);
+      allow read: if member(teamId);
+      allow create: if signedIn()
+        && request.resource.data.ownerId == request.auth.uid;
+      allow update: if signedIn()
+        && resource.data.ownerId == request.auth.uid
+        && request.resource.data.ownerId == request.auth.uid;
+      allow delete: if false;
+
       match /members/{uid} {
         allow read: if member(teamId);
-        allow create: if admin(teamId) || (uid == request.auth.uid && getAfter(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid);
-        allow update, delete: if admin(teamId);
-      }
-      match /chats/{chatId} {
-        allow read, create: if member(teamId); allow update, delete: if admin(teamId);
-        match /messages/{messageId} { allow read, create: if member(teamId); allow update, delete: if signedIn() && resource.data.authorId == request.auth.uid; }
-      }
-      match /boards/{boardId} {
-        allow read: if member(teamId) && (admin(teamId) || request.auth.uid in resource.data.memberIds);
-        allow create, update, delete: if admin(teamId);
-        match /tasks/{taskId} { allow read, write: if member(teamId) && (admin(teamId) || request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)/boards/$(boardId)).data.memberIds); }
+        allow create, update: if signedIn()
+          && uid == request.auth.uid
+          && getAfter(/databases/$(database)/documents/teams/$(teamId)).data.ownerId == request.auth.uid;
+        allow delete: if false;
       }
     }
   }

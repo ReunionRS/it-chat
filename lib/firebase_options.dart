@@ -10,11 +10,11 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions web = FirebaseOptions(
     apiKey: String.fromEnvironment('FIREBASE_API_KEY'),
-    appId: '1:959980227800:web:9afb8b99c66bbd4f76dbad',
-    messagingSenderId: '959980227800',
-    projectId: 'itchat-eaa60',
-    authDomain: 'itchat-eaa60.firebaseapp.com',
-    storageBucket: 'itchat-eaa60.firebasestorage.app',
-    measurementId: 'G-83M4DV1ZLV',
+    appId: String.fromEnvironment('FIREBASE_APP_ID'),
+    messagingSenderId: String.fromEnvironment('FIREBASE_MESSAGING_SENDER_ID'),
+    projectId: String.fromEnvironment('FIREBASE_PROJECT_ID'),
+    authDomain: String.fromEnvironment('FIREBASE_AUTH_DOMAIN'),
+    storageBucket: String.fromEnvironment('FIREBASE_STORAGE_BUCKET'),
+    measurementId: String.fromEnvironment('FIREBASE_MEASUREMENT_ID'),
   );
 }

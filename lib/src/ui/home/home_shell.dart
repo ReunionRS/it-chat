@@ -9,7 +9,9 @@ import '../../theme.dart';
 import '../boards/boards_screen.dart';
 import '../chats/chats_screen.dart';
 import '../chats/conversation_screen.dart';
+import '../chats/group_members_screen.dart';
 import '../contacts/contacts_screen.dart';
+import '../contacts/user_profile_dialog.dart';
 import '../profile/profile_screen.dart';
 import '../settings/settings_screen.dart';
 import '../shared/widgets.dart';
@@ -27,6 +29,7 @@ class _HomeShellState extends State<HomeShell> {
   String? selectedChat;
   String? selectedDirectChatId;
   String? selectedPeerUid;
+  bool showContactInfo = true;
 
   void selectPage(int value) {
     Navigator.of(context).maybePop();
@@ -76,6 +79,7 @@ class _HomeShellState extends State<HomeShell> {
           selectedChat = contact.name;
           selectedDirectChatId = chatId;
           selectedPeerUid = contact.uid;
+          showContactInfo = true;
         });
       } else {
         await Navigator.of(context).push(MaterialPageRoute(
@@ -127,12 +131,41 @@ class _HomeShellState extends State<HomeShell> {
                 child: FutureBuilder<List<Contact>>(
                   future: contactsFuture,
                   builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return const Center(
+                        child: Text(
+                          'Не удалось загрузить контакты',
+                          textAlign: TextAlign.center,
+                        ),
+                      );
+                    }
                     if (!snapshot.hasData) {
                       return const Center(child: CircularProgressIndicator());
                     }
                     final contacts = snapshot.data!;
                     if (contacts.isEmpty) {
-                      return const Center(child: Text('Контакты не найдены'));
+                      return Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.person_add_alt_1_outlined,
+                                size: 42),
+                            const SizedBox(height: 12),
+                            const Text(
+                              'Сначала добавьте пользователей\nв контакты',
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 12),
+                            TextButton(
+                              onPressed: () {
+                                Navigator.pop(dialogContext);
+                                setState(() => index = 1);
+                              },
+                              child: const Text('Перейти в контакты'),
+                            ),
+                          ],
+                        ),
+                      );
                     }
                     return ListView.builder(
                       itemCount: contacts.length,
@@ -197,6 +230,7 @@ class _HomeShellState extends State<HomeShell> {
           selectedChat = result.$1;
           selectedDirectChatId = chatId;
           selectedPeerUid = '';
+          showContactInfo = true;
         });
       } else {
         await Navigator.of(context).push(MaterialPageRoute(
@@ -220,6 +254,7 @@ class _HomeShellState extends State<HomeShell> {
   Widget _desktopChats() {
     final scheme = Theme.of(context).colorScheme;
     return Row(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         SizedBox(
           width: 400,
@@ -229,11 +264,13 @@ class _HomeShellState extends State<HomeShell> {
               selectedChat = title;
               selectedDirectChatId = chatId;
               selectedPeerUid = peerUid;
+              showContactInfo = true;
             }),
             onChatSelected: (title) => setState(() {
               selectedChat = title;
               selectedDirectChatId = null;
               selectedPeerUid = null;
+              showContactInfo = false;
             }),
           ),
         ),
@@ -259,6 +296,27 @@ class _HomeShellState extends State<HomeShell> {
                   peerUid: selectedPeerUid,
                 ),
         ),
+        if (selectedChat != null &&
+            selectedDirectChatId != null &&
+            showContactInfo) ...[
+          VerticalDivider(width: 1, color: scheme.outlineVariant),
+          SizedBox(
+            width: 340,
+            child: selectedPeerUid?.isNotEmpty == true
+                ? UserProfilePanel(
+                    key: ValueKey(selectedPeerUid),
+                    uid: selectedPeerUid!,
+                    fallbackName: selectedChat!,
+                    onClose: () => setState(() => showContactInfo = false),
+                  )
+                : GroupMembersScreen(
+                    key: ValueKey(selectedDirectChatId),
+                    chatId: selectedDirectChatId!,
+                    embedded: true,
+                    onClose: () => setState(() => showContactInfo = false),
+                  ),
+          ),
+        ],
       ],
     );
   }
@@ -335,37 +393,37 @@ class _AppMenu extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             _MenuTile(
-              icon: Icons.person_outline,
+              icon: Icons.account_circle_rounded,
               title: 'Мой профиль',
               selected: selectedIndex == 4,
               onTap: () => onSelected(4),
             ),
             _MenuTile(
-              icon: Icons.chat_bubble_outline,
+              icon: Icons.forum_rounded,
               title: 'Чаты',
               selected: selectedIndex == 0,
               onTap: () => onSelected(0),
             ),
             _MenuTile(
-              icon: Icons.group_add_outlined,
+              icon: Icons.group_add_rounded,
               title: 'Создать группу',
               selected: false,
               onTap: onCreateGroup,
             ),
             _MenuTile(
-              icon: Icons.people_outline,
+              icon: Icons.contacts_rounded,
               title: 'Контакты',
               selected: selectedIndex == 1,
               onTap: () => onSelected(1),
             ),
             _MenuTile(
-              icon: Icons.view_kanban_outlined,
+              icon: Icons.task_alt_rounded,
               title: 'Задачи',
               selected: selectedIndex == 2,
               onTap: () => onSelected(2),
             ),
             _MenuTile(
-              icon: Icons.settings_outlined,
+              icon: Icons.tune_rounded,
               title: 'Настройки',
               selected: selectedIndex == 3,
               onTap: () => onSelected(3),

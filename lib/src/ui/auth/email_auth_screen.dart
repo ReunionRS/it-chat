@@ -46,6 +46,7 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
   @override
   Widget build(BuildContext context) {
     final state = AppStateScope.of(context);
+    final scheme = Theme.of(context).colorScheme;
     return Scaffold(
         body: SafeArea(
             child: Center(
@@ -72,13 +73,14 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                                           size: 38))),
                               const SizedBox(height: 22),
                               RichText(
+                                  key: const Key('authLogo'),
                                   textAlign: TextAlign.center,
-                                  text: const TextSpan(
+                                  text: TextSpan(
                                       style: TextStyle(
                                           fontSize: 32,
                                           fontWeight: FontWeight.w800,
-                                          color: ink),
-                                      children: [
+                                          color: scheme.onSurface),
+                                      children: const [
                                         TextSpan(text: 'IT '),
                                         TextSpan(
                                             text: 'Chat',
@@ -98,15 +100,17 @@ class _EmailAuthScreenState extends State<EmailAuthScreen> {
                                   confirmationSent
                                       ? 'Мы отправили ссылку подтверждения на\n${email.text}'
                                       : 'Рабочее пространство вашей команды',
+                                  key: const Key('authSubtitle'),
                                   textAlign: TextAlign.center,
-                                  style: const TextStyle(
-                                      color: Colors.black54, height: 1.4)),
+                                  style: TextStyle(
+                                      color: scheme.onSurfaceVariant,
+                                      height: 1.4)),
                               const SizedBox(height: 28),
                               if (!confirmationSent) ...[
                                 Container(
                                     padding: const EdgeInsets.all(4),
                                     decoration: BoxDecoration(
-                                        color: const Color(0xFFEFF2F7),
+                                        color: scheme.surfaceContainerHighest,
                                         borderRadius:
                                             BorderRadius.circular(12)),
                                     child: Row(children: [
@@ -216,6 +220,8 @@ class _ModeButton extends StatelessWidget {
           child: Text(text,
               textAlign: TextAlign.center,
               style: TextStyle(
-                  color: selected ? Colors.white : Colors.black54,
+                  color: selected
+                      ? Colors.white
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
                   fontWeight: FontWeight.w700))));
 }

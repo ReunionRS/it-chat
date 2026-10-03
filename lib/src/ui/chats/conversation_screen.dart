@@ -7,6 +7,7 @@ import '../../state/app_state.dart';
 import '../../state/models.dart';
 import '../../theme.dart';
 import '../admin/members_screen.dart';
+import '../contacts/user_profile_dialog.dart';
 import '../shared/widgets.dart';
 import 'group_members_screen.dart';
 
@@ -59,7 +60,15 @@ class _ConversationScreenState extends State<ConversationScreen> {
         titleSpacing: 0,
         title: Row(children: [
           if (isDirect && widget.peerUid?.isNotEmpty == true)
-            _PeerAvatar(uid: widget.peerUid!, name: widget.title)
+            InkWell(
+              borderRadius: BorderRadius.circular(24),
+              onTap: () => showUserProfileDialog(
+                context,
+                uid: widget.peerUid!,
+                fallbackName: widget.title,
+              ),
+              child: _PeerAvatar(uid: widget.peerUid!, name: widget.title),
+            )
           else
             InkWell(
               borderRadius: BorderRadius.circular(24),
@@ -70,10 +79,13 @@ class _ConversationScreenState extends State<ConversationScreen> {
                           builder: (_) =>
                               GroupMembersScreen(chatId: widget.directChatId!)))
                   : null,
-              child: InitialsAvatar(
-                widget.title.characters.take(2).toString().toUpperCase(),
-                radius: 19,
-              ),
+              child: isDirect
+                  ? _GroupAvatar(
+                      chatId: widget.directChatId!, name: widget.title)
+                  : InitialsAvatar(
+                      widget.title.characters.take(2).toString().toUpperCase(),
+                      radius: 19,
+                    ),
             ),
           const SizedBox(width: 10),
           Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
@@ -199,6 +211,25 @@ class _PeerAvatar extends StatelessWidget {
     final state = AppStateScope.of(context);
     return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
       stream: state.userProfile(uid),
+      builder: (context, snapshot) => UserAvatar(
+        name: name,
+        radius: 19,
+        avatarBase64: (snapshot.data?.data()?['avatarBase64'] as String?) ?? '',
+      ),
+    );
+  }
+}
+
+class _GroupAvatar extends StatelessWidget {
+  const _GroupAvatar({required this.chatId, required this.name});
+  final String chatId;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final state = AppStateScope.of(context);
+    return StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+      stream: state.groupChat(chatId),
       builder: (context, snapshot) => UserAvatar(
         name: name,
         radius: 19,
@@ -418,7 +449,11 @@ class _AnimatedMessage extends StatelessWidget {
         child: Container(
           margin: const EdgeInsets.only(bottom: 10),
           padding: const EdgeInsets.fromLTRB(13, 10, 11, 7),
-          constraints: const BoxConstraints(maxWidth: 420),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width < 600
+                ? MediaQuery.sizeOf(context).width * .82
+                : 420,
+          ),
           decoration: BoxDecoration(
             color:
                 mine ? scheme.primaryContainer : scheme.surfaceContainerHighest,
@@ -437,20 +472,17 @@ class _AnimatedMessage extends StatelessWidget {
               ],
               Text(text),
               const SizedBox(height: 3),
-              Align(
-                alignment: Alignment.bottomRight,
-                child: Row(mainAxisSize: MainAxisSize.min, children: [
-                  Text(time,
-                      style: TextStyle(
-                          fontSize: 10, color: scheme.onSurfaceVariant)),
-                  if (mine) ...[
-                    const SizedBox(width: 3),
-                    Icon(read ? Icons.done_all : Icons.done,
-                        size: 15,
-                        color: read ? brandBlue : scheme.onSurfaceVariant),
-                  ],
-                ]),
-              ),
+              Row(mainAxisSize: MainAxisSize.min, children: [
+                Text(time,
+                    style: TextStyle(
+                        fontSize: 10, color: scheme.onSurfaceVariant)),
+                if (mine) ...[
+                  const SizedBox(width: 3),
+                  Icon(read ? Icons.done_all : Icons.done,
+                      size: 15,
+                      color: read ? brandBlue : scheme.onSurfaceVariant),
+                ],
+              ]),
             ],
           ),
         ),

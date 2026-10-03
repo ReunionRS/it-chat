@@ -16,6 +16,7 @@ ThemeData buildTheme() => ThemeData(
           surfaceTintColor: Colors.transparent),
       filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
+              foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(54),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),
@@ -58,6 +59,7 @@ ThemeData buildDarkTheme() => ThemeData(
           indicatorColor: Color(0xFF243B4D)),
       filledButtonTheme: FilledButtonThemeData(
           style: FilledButton.styleFrom(
+              foregroundColor: Colors.white,
               minimumSize: const Size.fromHeight(54),
               shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14)),

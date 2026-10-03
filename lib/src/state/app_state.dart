@@ -182,8 +182,26 @@ class AppState extends ChangeNotifier {
           'joinedAt': FieldValue.serverTimestamp()
         },
         SetOptions(merge: true));
-    await batch.commit();
-    await _loadBoards();
+    try {
+      await batch.commit();
+    } on FirebaseException catch (exception) {
+      if (exception.code != 'permission-denied') rethrow;
+      // Вход не должен сбрасываться из-за необязательной старой team-схемы.
+      await db.collection('users').doc(user.uid).set(
+        {
+          'email': email,
+          'displayName': name,
+          'updatedAt': FieldValue.serverTimestamp(),
+        },
+        SetOptions(merge: true),
+      );
+    }
+    try {
+      await _loadBoards();
+    } on FirebaseException catch (exception) {
+      if (exception.code != 'permission-denied') rethrow;
+      boards.clear();
+    }
     isAuthenticated = true;
     _startPresence();
     notifyListeners();
@@ -250,6 +268,8 @@ class AppState extends ChangeNotifier {
               name: (doc.data()['displayName'] as String?) ??
                   doc.data()['username'] as String,
               avatarBase64: (doc.data()['avatarBase64'] as String?) ?? '',
+              bio: (doc.data()['bio'] as String?) ?? '',
+              email: (doc.data()['email'] as String?) ?? '',
             ))
         .toList();
   }
@@ -283,18 +303,106 @@ class AppState extends ChangeNotifier {
   Future<List<Contact>> loadContacts() async {
     final uid = currentUid;
     if (uid == null) return const [];
-    final result =
-        await FirebaseFirestore.instance.collection('users').limit(50).get();
+    final result = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('contacts')
+        .orderBy('displayName')
+        .limit(50)
+        .get();
     return result.docs
-        .where((doc) => doc.id != uid && doc.data()['username'] != null)
+        .where((doc) => doc.data()['username'] != null)
         .map((doc) => Contact(
-              uid: doc.id,
+              uid: (doc.data()['uid'] as String?) ?? doc.id,
               username: doc.data()['username'] as String,
               name: (doc.data()['displayName'] as String?) ??
                   doc.data()['username'] as String,
               avatarBase64: (doc.data()['avatarBase64'] as String?) ?? '',
+              bio: (doc.data()['bio'] as String?) ?? '',
+              email: (doc.data()['email'] as String?) ?? '',
             ))
         .toList();
+  }
+
+  Stream<List<Contact>> savedContacts() {
+    final uid = currentUid;
+    if (uid == null) return Stream.value(const []);
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('contacts')
+        .orderBy('displayName')
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .map((doc) => Contact(
+                  uid: (doc.data()['uid'] as String?) ?? doc.id,
+                  username: (doc.data()['username'] as String?) ?? '',
+                  name: (doc.data()['displayName'] as String?) ??
+                      (doc.data()['username'] as String?) ??
+                      'Контакт',
+                  avatarBase64: (doc.data()['avatarBase64'] as String?) ?? '',
+                ))
+            .toList());
+  }
+
+  DocumentReference<Map<String, dynamic>> _contactRef(String contactUid) {
+    final uid = currentUid;
+    if (uid == null) throw StateError('Пользователь не авторизован');
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('contacts')
+        .doc(contactUid);
+  }
+
+  Future<bool> isContact(String contactUid) async =>
+      (await _contactRef(contactUid).get()).exists;
+
+  Future<void> addContact(Contact contact) async {
+    await _contactRef(contact.uid).set({
+      'uid': contact.uid,
+      'username': contact.username,
+      'displayName': contact.name,
+      'avatarBase64': contact.avatarBase64,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> removeContact(String contactUid) async {
+    await _contactRef(contactUid).delete();
+  }
+
+  Future<void> renameContact(String contactUid, String name) async {
+    final clean = name.trim();
+    if (clean.isEmpty) return;
+    await _contactRef(contactUid).update({'displayName': clean});
+  }
+
+  DocumentReference<Map<String, dynamic>> _blockedRef(String contactUid) {
+    final uid = currentUid;
+    if (uid == null) throw StateError('Пользователь не авторизован');
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('blockedContacts')
+        .doc(contactUid);
+  }
+
+  Future<bool> isBlocked(String contactUid) async =>
+      (await _blockedRef(contactUid).get()).exists;
+
+  Future<void> blockContact(Contact contact) async {
+    final batch = FirebaseFirestore.instance.batch();
+    batch.set(_blockedRef(contact.uid), {
+      'uid': contact.uid,
+      'blockedAt': FieldValue.serverTimestamp(),
+    });
+    batch.delete(_contactRef(contact.uid));
+    await batch.commit();
+  }
+
+  Future<void> unblockContact(String contactUid) async {
+    await _blockedRef(contactUid).delete();
   }
 
   Future<String> createGroupChat(String title, List<Contact> contacts) async {
@@ -336,6 +444,13 @@ class AppState extends ChangeNotifier {
         .collection('directChats')
         .doc(chatId)
         .update({'roles.$uid': role, 'access.$uid': access.name});
+  }
+
+  Future<void> updateGroupAvatar(String chatId, String avatarBase64) async {
+    await FirebaseFirestore.instance
+        .collection('directChats')
+        .doc(chatId)
+        .update({'avatarBase64': avatarBase64});
   }
 
   Future<void> _loadBoards() async {
@@ -392,11 +507,34 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Stream<QuerySnapshot<Map<String, dynamic>>> groupBoards(String groupId) =>
-      FirebaseFirestore.instance
-          .collection('taskBoards')
-          .where('groupId', isEqualTo: groupId)
-          .snapshots();
+  Future<void> deleteBoard(TaskBoard board) async {
+    final uid = currentUid;
+    if (!board.hasFullAccess(uid)) return;
+    final boardRef =
+        FirebaseFirestore.instance.collection('taskBoards').doc(board.id);
+    final tasks = await boardRef.collection('tasks').get();
+    final batch = FirebaseFirestore.instance.batch();
+    for (final task in tasks.docs) {
+      batch.delete(task.reference);
+    }
+    batch.delete(boardRef);
+    await batch.commit();
+    boards.removeWhere((item) => item.id == board.id);
+    notifyListeners();
+  }
+
+  Stream<List<QueryDocumentSnapshot<Map<String, dynamic>>>> groupBoards(
+      String groupId) {
+    final uid = currentUid;
+    if (uid == null) return Stream.value(const []);
+    return FirebaseFirestore.instance
+        .collection('taskBoards')
+        .where('memberIds', arrayContains: uid)
+        .snapshots()
+        .map((snapshot) => snapshot.docs
+            .where((doc) => doc.data()['groupId'] == groupId)
+            .toList());
+  }
 
   Stream<QuerySnapshot<Map<String, dynamic>>> boardTasks(String boardId) =>
       FirebaseFirestore.instance
@@ -406,11 +544,34 @@ class AppState extends ChangeNotifier {
           .orderBy('createdAt')
           .snapshots();
 
+  Stream<DocumentSnapshot<Map<String, dynamic>>> boardDocument(
+          String boardId) =>
+      FirebaseFirestore.instance
+          .collection('taskBoards')
+          .doc(boardId)
+          .snapshots();
+
+  Future<void> setBoardBackground(
+      TaskBoard board, String backgroundBase64) async {
+    final uid = currentUid;
+    if (!board.canEdit(uid)) return;
+    await FirebaseFirestore.instance
+        .collection('taskBoards')
+        .doc(board.id)
+        .update({
+      'backgroundBase64': backgroundBase64,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
   Future<void> addBoardTask(
     TaskBoard board,
     String title,
-    String assigneeId,
-    String assigneeName,
+    List<String> assigneeIds,
+    List<String> assigneeNames,
+    List<String> checklist,
+    DateTime? deadline,
+    String imageBase64,
   ) async {
     final uid = currentUid;
     final clean = title.trim();
@@ -421,14 +582,115 @@ class AppState extends ChangeNotifier {
         .collection('tasks')
         .add({
       'title': clean,
-      'assigneeId': assigneeId,
-      'assignee': assigneeName,
+      'assigneeIds': assigneeIds,
+      'assigneeNames': assigneeNames,
+      'assignee':
+          assigneeNames.isEmpty ? 'Не назначен' : assigneeNames.join(', '),
+      'checklist': [
+        for (var index = 0; index < checklist.length; index++)
+          {
+            'id': '${DateTime.now().microsecondsSinceEpoch}_$index',
+            'title': checklist[index],
+            'done': false
+          }
+      ],
       'status': TaskStatus.todo.name,
       'priority': 'Средний',
+      'deadline': deadline == null ? null : Timestamp.fromDate(deadline),
+      'imageBase64': imageBase64,
       'createdBy': uid,
       'createdAt': FieldValue.serverTimestamp(),
       'updatedAt': FieldValue.serverTimestamp(),
     });
+  }
+
+  Future<void> toggleTaskChecklist(
+      TaskBoard board, BoardTask task, TaskChecklistItem item) async {
+    final uid = currentUid;
+    if (uid == null || !board.canEdit(uid)) return;
+    final taskRef = FirebaseFirestore.instance
+        .collection('taskBoards')
+        .doc(board.id)
+        .collection('tasks')
+        .doc(task.id);
+    await FirebaseFirestore.instance.runTransaction((transaction) async {
+      final snapshot = await transaction.get(taskRef);
+      final checklist = List<Map<String, dynamic>>.from(
+          (snapshot.data()?['checklist'] as List?) ?? const []);
+      for (final current in checklist) {
+        if (current['id'] == item.id) current['done'] = current['done'] != true;
+      }
+      transaction.update(taskRef, {
+        'checklist': checklist,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+    });
+  }
+
+  Future<TaskChecklistItem?> addTaskChecklistItem(
+      TaskBoard board, BoardTask task, String title) async {
+    final uid = currentUid;
+    final clean = title.trim();
+    if (uid == null || clean.isEmpty || !board.canEdit(uid)) return null;
+    final item = TaskChecklistItem(
+        id: DateTime.now().microsecondsSinceEpoch.toString(), title: clean);
+    await FirebaseFirestore.instance
+        .collection('taskBoards')
+        .doc(board.id)
+        .collection('tasks')
+        .doc(task.id)
+        .update({
+      'checklist': FieldValue.arrayUnion([
+        {
+          'id': item.id,
+          'title': item.title,
+          'done': false,
+        }
+      ]),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+    return item;
+  }
+
+  Future<void> setTaskDeadline(
+      TaskBoard board, BoardTask task, DateTime deadline) async {
+    final uid = currentUid;
+    if (uid == null || !board.canEdit(uid)) return;
+    await FirebaseFirestore.instance
+        .collection('taskBoards')
+        .doc(board.id)
+        .collection('tasks')
+        .doc(task.id)
+        .update({
+      'deadline': Timestamp.fromDate(deadline),
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> setTaskImage(
+      TaskBoard board, BoardTask task, String imageBase64) async {
+    final uid = currentUid;
+    if (uid == null || !board.canEdit(uid)) return;
+    await FirebaseFirestore.instance
+        .collection('taskBoards')
+        .doc(board.id)
+        .collection('tasks')
+        .doc(task.id)
+        .update({
+      'imageBase64': imageBase64,
+      'updatedAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> deleteBoardTask(TaskBoard board, BoardTask task) async {
+    final uid = currentUid;
+    if (!board.canDeleteTask(uid, task)) return;
+    await FirebaseFirestore.instance
+        .collection('taskBoards')
+        .doc(board.id)
+        .collection('tasks')
+        .doc(task.id)
+        .delete();
   }
 
   Future<void> moveBoardTask(
@@ -486,7 +748,46 @@ class AppState extends ChangeNotifier {
     return FirebaseFirestore.instance
         .collection('directChats')
         .where('memberIds', arrayContains: uid)
+        .snapshots(includeMetadataChanges: true);
+  }
+
+  Stream<QuerySnapshot<Map<String, dynamic>>> chatFolders() {
+    final uid = currentUid;
+    if (uid == null) return const Stream.empty();
+    return FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('chatFolders')
+        .orderBy('createdAt')
         .snapshots();
+  }
+
+  Future<void> createChatFolder(String name, String chatId) async {
+    final uid = currentUid;
+    final clean = name.trim();
+    if (uid == null || clean.isEmpty || clean.length > 30) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('chatFolders')
+        .add({
+      'name': clean,
+      'chatIds': [chatId],
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  Future<void> addChatToFolder(String folderId, String chatId) async {
+    final uid = currentUid;
+    if (uid == null) return;
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('chatFolders')
+        .doc(folderId)
+        .update({
+      'chatIds': FieldValue.arrayUnion([chatId])
+    });
   }
 
   Stream<DocumentSnapshot<Map<String, dynamic>>> userProfile(String uid) =>

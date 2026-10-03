@@ -5,6 +5,7 @@ import '../../state/app_state.dart';
 import '../../state/models.dart';
 import '../../theme.dart';
 import '../shared/widgets.dart';
+import 'user_profile_dialog.dart';
 
 class ContactsScreen extends StatefulWidget {
   const ContactsScreen({super.key, this.onMenuPressed, this.onChat});
@@ -56,6 +57,14 @@ class _ContactsScreenState extends State<ContactsScreen> {
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: TextField(
                 controller: controller,
+                onChanged: (value) {
+                  if (value.trim().isEmpty) {
+                    setState(() {
+                      results = const [];
+                      error = null;
+                    });
+                  }
+                },
                 onSubmitted: (_) => search(),
                 decoration: InputDecoration(
                     prefixIcon: const Icon(Icons.search),
@@ -72,33 +81,72 @@ class _ContactsScreenState extends State<ContactsScreen> {
                         icon: Icons.error_outline,
                         title: 'Поиск недоступен',
                         subtitle: error!)
-                    : results.isEmpty
-                        ? const EmptyState(
-                            icon: Icons.people_outline,
-                            title: 'Найдите коллег',
-                            subtitle: 'Введите @username в строке поиска')
-                        : ListView.separated(
-                            itemCount: results.length,
-                            separatorBuilder: (_, __) =>
-                                const Divider(height: 1, indent: 72),
-                            itemBuilder: (_, index) {
-                              final contact = results[index];
-                              return ListTile(
-                                  leading: UserAvatar(
-                                      name: contact.name,
-                                      avatarBase64: contact.avatarBase64),
-                                  title: Text(contact.name,
-                                      style: const TextStyle(
-                                          fontWeight: FontWeight.w700)),
-                                  subtitle: Text('@${contact.username}'),
-                                  trailing: IconButton(
-                                      tooltip: 'Написать',
-                                      onPressed: widget.onChat == null
-                                          ? null
-                                          : () => widget.onChat!(contact),
-                                      icon: const Icon(
-                                          Icons.chat_bubble_outline,
-                                          color: brandBlue)));
-                            }))
+                    : controller.text.trim().isNotEmpty
+                        ? _contactList(results, emptyTitle: 'Ничего не найдено')
+                        : StreamBuilder<List<Contact>>(
+                            stream: AppStateScope.of(context).savedContacts(),
+                            builder: (context, snapshot) {
+                              if (snapshot.hasError) {
+                                return const EmptyState(
+                                  icon: Icons.error_outline,
+                                  title: 'Не удалось загрузить контакты',
+                                  subtitle: 'Проверьте правила Firestore',
+                                );
+                              }
+                              if (!snapshot.hasData) {
+                                return const Center(
+                                    child: CircularProgressIndicator());
+                              }
+                              return _contactList(snapshot.data!,
+                                  emptyTitle: 'Контактов пока нет');
+                            },
+                          ))
       ]));
+
+  Widget _contactList(List<Contact> contacts, {required String emptyTitle}) {
+    if (contacts.isEmpty) {
+      return EmptyState(
+        icon: Icons.people_outline,
+        title: emptyTitle,
+        subtitle: 'Найдите пользователя по @username',
+      );
+    }
+    return ListView.separated(
+      itemCount: contacts.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, indent: 72),
+      itemBuilder: (_, index) {
+        final contact = contacts[index];
+        return ListTile(
+          onTap: () => showUserProfileDialog(context,
+              uid: contact.uid, fallbackName: contact.name),
+          leading: _LiveContactAvatar(contact: contact),
+          title: Text(contact.name,
+              style: const TextStyle(fontWeight: FontWeight.w700)),
+          subtitle: Text('@${contact.username}'),
+          trailing: IconButton(
+            tooltip: 'Написать',
+            onPressed:
+                widget.onChat == null ? null : () => widget.onChat!(contact),
+            icon: const Icon(Icons.chat_bubble_outline, color: brandBlue),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _LiveContactAvatar extends StatelessWidget {
+  const _LiveContactAvatar({required this.contact});
+  final Contact contact;
+
+  @override
+  Widget build(BuildContext context) =>
+      StreamBuilder<DocumentSnapshot<Map<String, dynamic>>>(
+        stream: AppStateScope.of(context).userProfile(contact.uid),
+        builder: (context, snapshot) => UserAvatar(
+          name: contact.name,
+          avatarBase64: (snapshot.data?.data()?['avatarBase64'] as String?) ??
+              contact.avatarBase64,
+        ),
+      );
 }
